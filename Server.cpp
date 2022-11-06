@@ -3,10 +3,16 @@
 #include <iostream>
 #include <stdlib.h>
 #include <string>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <errno.h>
+#include <string.h>
+#include <sys/types.h>
+#include <time.h>
+#include <math.h>
 #include <chrono>
 #include <thread>
-#include <sys/socket.h>
-#include <unistd.h>
 
 #define PORT 8080
 using namespace std;
@@ -51,5 +57,27 @@ void display_startup_sequence()
 
 int main(int argc, char** argv)
 {
-	display_startup_sequence();
+	//display_startup_sequence();
+	int listenfd = 0, connfd = 0;
+	struct sockaddr_in serv_addr;
+	char sendBuffer[1024];
+	listenfd = socket(AF_INET, SOCK_STREAM, 0);
+	cout << "listening on listenfd: " << listenfd << endl;
+	memset(&serv_addr, '0', sizeof(serv_addr));
+	memset(sendBuffer,'0', sizeof(sendBuffer));
+
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	serv_addr.sin_port = htons(5437); // setting the port number
+
+	bind(listenfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr));
+
+	listen(listenfd, 15); // number of connections i can accept
+
+	while(true)
+	{
+		connfd = accept(listenfd,(struct sockaddr*) NULL, NULL);
+		cout << "connection tried" << endl;
+	}
+
 }
