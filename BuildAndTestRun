@@ -1,0 +1,3 @@
+gcc class_client_demo.c -o client
+gcc class_server_demo.c -o server
+./server && ./client 127.0.0.1
