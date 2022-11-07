@@ -13,6 +13,7 @@
 #include <math.h>
 #include <chrono>
 #include <thread>
+#include <pthread.h>
 
 #define PORT 8080
 using namespace std;
@@ -21,6 +22,8 @@ bool seats_available = true;
 bool* seating;
 int row;
 int col;
+
+pthread_mutex_t lock;
 
 void display_startup_sequence()
 {
@@ -59,19 +62,23 @@ void display_startup_sequence()
 	}
 }
 //todo: 
-//bool try_purchase_seat(int i, int j)
+//bool try_purchase_seat(int i, int j) 
 // check to see if the seating is full
 
 void* client_connection(void* arg)
 {
+	int connfd = (int)(long)arg;
+	cout << connfd << endl;
 	while (seats_available)
 	{
 		//write available seats
 		//read selection
 		// lock
-		//update seats
+		//update seats if applicable
 		// unlock
+		//send confirmation
 	}
+	return NULL;
 }
 
 int main(int argc, char** argv)
@@ -90,14 +97,16 @@ int main(int argc, char** argv)
 	serv_addr.sin_port = htons(5437); // setting the port number
 
 	bind(listenfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr));
-
+	int counter = 0;
 	listen(listenfd, 15); // number of connections i can accept
 	pthread_t tid[15]; // 15 threads corresponding to connections
-
+	pthread_mutex_init(&lock, NULL); //initialize lock
 	while(true)
 	{
 		connfd = accept(listenfd,(struct sockaddr*) NULL, NULL);
 		cout << "connection tried" << endl;
+		pthread_create(&tid[counter], NULL, client_connection, (void*)(long)connfd);
+		counter++;
 	}
 
 }
