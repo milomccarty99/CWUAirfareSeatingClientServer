@@ -10,6 +10,8 @@
 #define PORT 5437
 
 using namespace std;
+int row;
+int col;
 
 int main(int argc, char * argv[])
 {
@@ -17,7 +19,6 @@ int main(int argc, char * argv[])
     struct sockaddr_in serv_addr;
     string msg = "hello from client";
     //char *message = msg.c_str() ;
-    char buffer[1024];
     sock = socket(AF_INET, SOCK_STREAM,0);
     if(sock < 0)
     {
@@ -38,11 +39,16 @@ int main(int argc, char * argv[])
         cout << "Connection failed"<< endl;
         return -1;
     }
-    send(sock,msg.c_str(),sizeof(msg.c_str()),0);
-    cout<<"hello message sent" << endl;
-    valread = read(sock,buffer,1024);
+    //send(sock,msg.c_str(),sizeof(msg.c_str()),0);
+    //cout<<"hello message sent" << endl;
+    int numbBuffer[2];
 
-    cout << buffer << endl;
+    valread = read(sock,numbBuffer,2*sizeof(int));
+
+    cout << numbBuffer[0] << " " << numbBuffer[1] << endl;
+    numbBuffer[0] = 1;
+    numbBuffer[1] = 2;
+    write(sock,numbBuffer,sizeof(numbBuffer));
     close(client_fd);
     return 0;
 }

@@ -15,7 +15,7 @@
 #include <thread>
 #include <pthread.h>
 
-#define PORT 8080
+#define PORT 5437
 using namespace std;
 
 bool seats_available = true;
@@ -50,8 +50,8 @@ void display_startup_sequence()
 		system("clear");
 		for (int j = 0; j < 15; j++)
 		{
-			int diff = i  - banner[j].length();
-			for (int t = i; t < banner[j].length(); t++)
+			int banner_length = banner[j].length();
+			for (int t = i; t < banner_length; t++)
 			{
 				cout << banner[j][t];
 			}
@@ -61,6 +61,20 @@ void display_startup_sequence()
 		this_thread::sleep_for(chrono::milliseconds(25));
 	}
 }
+void display_seating()
+{
+	cout << " ============" << endl;
+	for(int i = 0; i < row; i++)
+	{
+		for(int j = 0; j < col; j++)
+		{
+			char display_char = seating[i*col+row] ? 'a' : 'u';
+			cout << display_char;
+		}
+		cout << endl;
+	}
+	cout << " ============" << endl;
+}
 //todo: 
 //bool try_purchase_seat(int i, int j) 
 // check to see if the seating is full
@@ -69,21 +83,60 @@ void* client_connection(void* arg)
 {
 	int connfd = (int)(long)arg;
 	cout << connfd << endl;
+	int numbBuffer[2];
+	numbBuffer[0] = row;
+	numbBuffer[1] = col;
+	write(connfd,numbBuffer,2*sizeof(int));
+	char bufferSeatsAvailable[row*col];
+	memset(bufferSeatsAvailable, 'u',sizeof(bufferSeatsAvailable));
 	while (seats_available)
 	{
+		display_seating();
+
+		int selectionBuffer[2];
 		//write available seats
+		write(connfd,bufferSeatsAvailable,sizeof(bufferSeatsAvailable));
 		//read selection
+		//read(connfd,)
+		int valread = read(connfd,selectionBuffer, sizeof(selectionBuffer));
+		cout << valread << endl; // value read 
+		cout << "selecting seat: " << selectionBuffer[0] << "," << selectionBuffer[1] << endl; // output selection
 		// lock
+		pthread_mutex_lock(&lock);
 		//update seats if applicable
+		int i = selectionBuffer[0];
+		int j = selectionBuffer[1];
+		seating[i*col + j] = true;
 		// unlock
+		pthread_mutex_unlock(&lock);
 		//send confirmation
+		display_seating();
+		//seats_available = false;
 	}
 	return NULL;
 }
 
 int main(int argc, char** argv)
 {
-	//display_startup_sequence();
+	if(argc != 3)
+	{
+		cout << "improper number of arguments given" << endl;
+		return -1;
+	}
+	try
+	{
+		row = stoi(argv[1]);
+		col = stoi(argv[2]);
+	}
+	catch (exception &err)
+	{
+		cout<< "error while trying to read arguments" << endl;
+		return -1;
+	}
+	seating = (bool*)malloc(row * col * sizeof(bool));
+
+	//cout << row << " " << col << endl;
+	display_startup_sequence();
 	int listenfd = 0, connfd = 0;
 	struct sockaddr_in serv_addr;
 	char sendBuffer[1024];
@@ -104,7 +157,7 @@ int main(int argc, char** argv)
 	while(true)
 	{
 		connfd = accept(listenfd,(struct sockaddr*) NULL, NULL);
-		cout << "connection tried" << endl;
+		cout << "connection accepted: " << connfd << endl;
 		pthread_create(&tid[counter], NULL, client_connection, (void*)(long)connfd);
 		counter++;
 	}
