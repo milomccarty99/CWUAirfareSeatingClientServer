@@ -1,0 +1,3 @@
+g++ Client.cpp -o client;
+./client;
+rm client;

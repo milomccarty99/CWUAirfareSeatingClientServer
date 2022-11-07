@@ -1,0 +1,3 @@
+g++ Server.cpp -o server;
+./server;
+rm server;

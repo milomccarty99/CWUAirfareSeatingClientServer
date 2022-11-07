@@ -17,6 +17,10 @@
 #define PORT 8080
 using namespace std;
 
+bool seats_available = true;
+bool* seating;
+int row;
+int col;
 
 void display_startup_sequence()
 {
@@ -54,6 +58,21 @@ void display_startup_sequence()
 		this_thread::sleep_for(chrono::milliseconds(25));
 	}
 }
+//todo: 
+//bool try_purchase_seat(int i, int j)
+// check to see if the seating is full
+
+void* client_connection(void* arg)
+{
+	while (seats_available)
+	{
+		//write available seats
+		//read selection
+		// lock
+		//update seats
+		// unlock
+	}
+}
 
 int main(int argc, char** argv)
 {
@@ -73,6 +92,7 @@ int main(int argc, char** argv)
 	bind(listenfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr));
 
 	listen(listenfd, 15); // number of connections i can accept
+	pthread_t tid[15]; // 15 threads corresponding to connections
 
 	while(true)
 	{
