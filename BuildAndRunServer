@@ -1,3 +1,3 @@
-g++ Server.cpp -o server;
+g++ Server.cpp -o server -pthread;
 ./server;
 rm server;

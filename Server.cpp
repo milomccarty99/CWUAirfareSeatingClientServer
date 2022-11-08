@@ -16,6 +16,8 @@
 #include <pthread.h>
 
 #define PORT 5437
+#define DEFAULT_ROW 10
+#define DEFAULT_COL 10
 using namespace std;
 
 bool seats_available = true;
@@ -68,8 +70,9 @@ void display_seating()
 	{
 		for(int j = 0; j < col; j++)
 		{
-			char display_char = seating[i*col+row] ? 'a' : 'u';
-			cout << display_char;
+			string boxel = (seating[i * col + j]) ? "\033[1;42ma" : "u";
+			cout << boxel;
+			cout << "\033[0m";
 		}
 		cout << endl;
 	}
@@ -78,7 +81,31 @@ void display_seating()
 //todo: 
 //bool try_purchase_seat(int i, int j) 
 // check to see if the seating is full
-
+bool check_seats_available()
+{
+	for (int i = 0; i < row; i++)
+	{
+		for (int j = 0; j < col; j++)
+		{
+			if (seating[i * col + j])
+			{
+				return true;
+			}
+		}
+	}
+	seats_available = false;
+	return false;
+}
+void seating_to_buffer(char* buffer_output)
+{
+	for (int i = 0; i < row; i++)
+	{
+		for (int j = 0; j < col; j++)
+		{
+			buffer_output[i*col + j] = seating[i * col + j] ? 'a' : 'u';
+		}
+	}
+}
 void* client_connection(void* arg)
 {
 	int connfd = (int)(long)arg;
@@ -87,56 +114,95 @@ void* client_connection(void* arg)
 	numbBuffer[0] = row;
 	numbBuffer[1] = col;
 	write(connfd,numbBuffer,2*sizeof(int));
-	char bufferSeatsAvailable[row*col];
-	memset(bufferSeatsAvailable, 'u',sizeof(bufferSeatsAvailable));
+
+	char purchase_status_buffer[1];
+
 	while (seats_available)
 	{
-		display_seating();
+		//display_seating();
 
 		int selectionBuffer[2];
 		//write available seats
-		write(connfd,bufferSeatsAvailable,sizeof(bufferSeatsAvailable));
+		char seating_display_buffer[row * col];
+		seating_to_buffer(seating_display_buffer);
+		write(connfd,seating_display_buffer,row * col * sizeof(char));
 		//read selection
-		//read(connfd,)
+		//reads buffer from client. keeps reading if not careful
 		int valread = read(connfd,selectionBuffer, sizeof(selectionBuffer));
-		cout << valread << endl; // value read 
-		cout << "selecting seat: " << selectionBuffer[0] << "," << selectionBuffer[1] << endl; // output selection
+		//cout << valread << endl; // value read 
 		// lock
-		pthread_mutex_lock(&lock);
-		//update seats if applicable
-		int i = selectionBuffer[0];
-		int j = selectionBuffer[1];
-		seating[i*col + j] = true;
-		// unlock
-		pthread_mutex_unlock(&lock);
+		if (valread > 0)
+		{
+			int i = selectionBuffer[0];
+			int j = selectionBuffer[1];
+			cout << "attempting to purchase seat: " << i << "," << j << " from clientID: " << connfd << endl; // output selection
+			cout << valread << endl;
+			if (i < 0 || i >= row || j < 0 || j >= col)
+			{
+				//case out of bounds
+				purchase_status_buffer[0] = 'o';
+
+			}
+			else if (!seating[i * col + j])
+			{
+				//case seat unavilable
+				purchase_status_buffer[0] = 'u';
+
+			}
+			else
+			{
+				//case valid purchase
+				purchase_status_buffer[0] = 'a';
+				pthread_mutex_lock(&lock);
+				seating[i * col + j] = false;
+				// unlock
+				pthread_mutex_unlock(&lock);
+			}
+			write(connfd, purchase_status_buffer, sizeof(char));
+			display_seating();
+		}
+		
 		//send confirmation
-		display_seating();
 		//seats_available = false;
+		check_seats_available();
 	}
+	cout << " no more seats available " << endl;
+	// f is for fencepost, the end of seating available
+	purchase_status_buffer[0] = 'f';
+	write(connfd, purchase_status_buffer, sizeof(char));
 	return NULL;
 }
 
 int main(int argc, char** argv)
 {
+	display_startup_sequence();
 	if(argc != 3)
 	{
-		cout << "improper number of arguments given" << endl;
-		return -1;
+		cout << "improper number of arguments given, using default 10x10" << endl;
+		row = DEFAULT_ROW;
+		col = DEFAULT_COL;
 	}
-	try
+	else
 	{
-		row = stoi(argv[1]);
-		col = stoi(argv[2]);
+		try
+		{
+			row = stoi(argv[1]);
+			col = stoi(argv[2]);
+		}
+		catch (exception& err)
+		{
+			cout << "error while trying to read arguments" << endl;
+			return -1;
+		}
 	}
-	catch (exception &err)
+	if (row * col <= 0)
 	{
-		cout<< "error while trying to read arguments" << endl;
+		cout << "invalid seating row and column" << endl;
 		return -1;
 	}
 	seating = (bool*)malloc(row * col * sizeof(bool));
-
-	//cout << row << " " << col << endl;
-	display_startup_sequence();
+	memset(seating, 1, row * col * sizeof(bool)); //initialize seating to be true
+	//display_startup_sequence();
 	int listenfd = 0, connfd = 0;
 	struct sockaddr_in serv_addr;
 	char sendBuffer[1024];
