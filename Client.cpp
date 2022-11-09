@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <chrono>
 #include <thread>
+#include <sstream>
 
 #define PORT_DEFAULT 5437
 #define IP_DEFAULT "127.0.0.1"
@@ -20,6 +21,13 @@ int row;
 int col;
 char* display_buffer;
 bool seating_available = true;
+
+int port_num = PORT_DEFAULT;
+string ip_addr = IP_DEFAULT;
+int timeout = TIMEOUT_DEFAULT;
+bool automatic_mode = false;
+string ini_filename = "";
+
 void display_seating()
 {
     char signal = display_buffer[0];
@@ -71,6 +79,12 @@ int connect_socket(int sock, string ip_addr, int port_num, int timeout)
     }
     return client_fd;
 }
+string remove_spaces(string str)
+{
+    
+    //str.erase((remove(str.begin(),str.end(),isspace)), str.end());
+    return str;
+}
 bool try_purchase_seat(int sock, int i, int j)
 {
     int numbBuffer[2];
@@ -112,14 +126,10 @@ void manual_purchase_mode(int sock)
 {
     
 }
+
 int main(int argc, char * argv[])
 {
     srand(time(NULL));
-    int port_num = PORT_DEFAULT;
-    string ip_addr = IP_DEFAULT;
-    int timeout = TIMEOUT_DEFAULT;
-    bool automatic_mode = false;
-    string ini_filename = "";
     if (argc >= 2)
     {
         //select mode 
@@ -135,25 +145,33 @@ int main(int argc, char * argv[])
             string line;
             while (getline(myinifile, line))
             {
-                cout << line << endl;
-                string key = strtok(line, " =");
-                string data = strtok(NULL, " =");
-                if (key == "IP")
+                std::istringstream iss (line);
+                //cout << line << endl;
+                string key;
+                if(getline(iss,key,' '))
                 {
-                    ip_addr = data;
-                    cout << "IP ADDRESS IS: " << data << endl;
-                }
-                else if (key == "Port")
-                {
-                    port_num = stoi(data);
-                    cout << "PORT NUMBER IS: " << data << endl;
+                    string data;
+                    getline(iss,data, ' ');
+                    getline(iss,data, ' ');
+                    //cout << data << endl;
+                
+                    if (key == "IP")
+                    {
+                        ip_addr = data;
+                        //cout << "IP ADDRESS IS: " << data << endl;
+                    }
+                    else if (key == "Port")
+                    {
+                        port_num = stoi(data);
+                        //cout << "PORT NUMBER IS: " << data << endl;
 
-                }
-                else if (key == "Timeout")
-                {
-                    timeout = stoi(data);
-                    cout << "TIMEOUT IS: " << data << endl;
+                    }
+                    else if (key == "Timeout")
+                    {
+                        timeout = stoi(data);
+                        //cout << "TIMEOUT IS: " << data << endl;
 
+                    }
                 }
                 
             }
@@ -190,6 +208,7 @@ int main(int argc, char * argv[])
     if (client_fd < 0)
     {
         cout << "error when attempting to connect to the socket" << endl;
+        return -1;
     }
     //getting size of seating area
     int numbBuffer[2];
