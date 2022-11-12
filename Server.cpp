@@ -125,7 +125,7 @@ void* client_connection(void* arg)
 		//write available seats
 		char seating_display_buffer[row * col];
 		seating_to_buffer(seating_display_buffer);
-		write(connfd,seating_display_buffer,row * col * sizeof(char));
+		write(connfd, seating_display_buffer, row * col * sizeof(char));
 		//read selection
 		//reads buffer from client. keeps reading if not careful
 		int valread = read(connfd,selectionBuffer, sizeof(selectionBuffer));
